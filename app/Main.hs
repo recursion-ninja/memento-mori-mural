@@ -2,21 +2,23 @@
 
 module Main where
 
-import Control.Monad.Trans.State.Strict
-import Data.Foldable
+import           Control.Monad.Trans.State.Strict
+import           Data.Foldable
+import           Data.List.NonEmpty               (NonEmpty (..), init)
 #if __GLASGOW_HASKELL__ < 861
-import Data.Semigroup ((<>))
+import           Data.Semigroup                   ((<>))
 #endif
-import Data.Time
-import Data.Time.Calendar.OrdinalDate
-import System.Environment
-import Text.Read (readMaybe)
+import           Data.Time
+import           Data.Time.Calendar.OrdinalDate
+import           Prelude                          hiding (init)
+import           System.Environment
+import           Text.Read                        (readMaybe)
 
 
 data  YearAlive
     = LeapWeekYear
     | FullYear
-    | Partial Word
+    | Partial !Word
 
 
 main :: IO ()
@@ -93,7 +95,7 @@ daysSinceBirthdayOnStartOfYear birthDay yearAfter = daysElapsed
      birthYear   = getBirthYear birthDay
      targetYear  = fromOrdinalDate (fromIntegral (birthYear + yearAfter)) 0
      daysElapsed = fromIntegral (diffDays targetYear birthDay) - 1
-                        
+
 
 renderLifetimeMural :: Day -> Word -> UTCTime -> String
 renderLifetimeMural birthDay lifeExpectancy today = unlines . fmap pad . lines $ fold
@@ -105,6 +107,7 @@ renderLifetimeMural birthDay lifeExpectancy today = unlines . fmap pad . lines $
     daysAlive  = getDaysAlive  birthDay today
     weeksAlive = getWeeksAlive birthDay lifeExpectancy daysAlive
     pad = ("  " <>)
+
 
 body :: Day -> Word -> [YearAlive] -> String
 body birthDay lifeExpectancy yearsAlive = unlines [ rowGen r | r <- [0..6] ]
@@ -148,7 +151,7 @@ bodyPrefix birthDay = "┃" <> suffix
   where
     birthYear = getBirthYear birthDay
     startYear = getStartYear birthDay
-    diffYears = birthYear - startYear 
+    diffYears = birthYear - startYear
     suffix =
       case diffYears of
         0 -> ""
@@ -163,9 +166,9 @@ footer birthDay lifeExpectancy = unlines
     ]
 
 
-fullWidthLine :: Day -> Word -> Char -> Char -> Char -> Char -> String 
+fullWidthLine :: Day -> Word -> Char -> Char -> Char -> Char -> String
 fullWidthLine birthDay lifeExpectancy s f a e =
-    s : ((`evalState` (0::Word)) . traverse (const every5) . tail $ init line) <> [e]
+    s : ((`evalState` (0::Word)) . traverse (const every5) $ clipEnds line) <> [e]
   where
     line   = footerYears birthDay lifeExpectancy
     every5 = do
@@ -173,8 +176,13 @@ fullWidthLine birthDay lifeExpectancy s f a e =
         put  $ if v == 4 then 0 else v + 1
         pure $ if v == 0 then f else a
 
+    clipEnds []       = []
+    clipEnds [_]      = []
+    clipEnds [_,_]    = []
+    clipEnds (_:y:ys) = init (y:|ys)
 
-footerYears :: Day -> Word -> String 
+
+footerYears :: Day -> Word -> String
 footerYears birthDay lifeExpectancy = shownYears
   where
     birthYear  = getBirthYear birthDay
