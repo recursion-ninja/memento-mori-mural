@@ -1,0 +1,9 @@
+constraints:
+  base          ==4.8.*,
+  time          ==1.5.*,
+  transformers  ==0.4.2.*
+
+packages:
+  ./
+
+with-compiler: ghc-7.10.3
