@@ -161,18 +161,18 @@ static-analysis-check-setup: make-bin-dir
 static-analysis-check-deploy: hie-deploy
 	@$(eval stan-log := .stan.log)
 	@$(eval observations := .stan.observations.log)
+	@rm -f $(stan-log)
+	@rm -f $(observations)
 	@touch $(stan-log)
 	$(stan-exe) $(stan-flags) | tee $(stan-log)
-	cat $(stan-log)
-	@grep ' ID:            ' $(stan-log) || true > $(observations)
+	@grep ' ID:            ' $(stan-log) > $(observations) || true
 	@rm -f $(stan-log)
-	@$(eval count := $(shell wc -l $(observations) | cut -d " " -f1))
 	@find . -empty -name $(observations) | grep "^" &> /dev/null || ( \
-	  echo -e "\nAnti-pattern observations found!\nCorrect the following" $(count) "observations:\n" && \
+	  echo -e "\nAnti-pattern observations found!\nCorrect the following $$(wc -l $(observations) | cut -d " " -f1) observations:\n" && \
 	  echo -n " ┏" && \
 	  printf '━%.0s' {1..52} && \
 	  echo "━" && \
-	  cat $(observations) && \
+	  cat $(observations) && echo "" && \
 	  rm -f $(observations) && \
 	  sleep 1 && \
 	  exit 1 \
@@ -191,10 +191,9 @@ documentation-check-deploy:
 	cabal haddock $(with-compiler-flags) $(cabal-haddock-flags) $(cabal-total-targets) | tee $(docs-log)
 	@grep '^  [[:digit:]][[:digit:]]% (' $(docs-log) || true > $(missing-docs)
 	@rm -f $(docs-log)
-	@$(eval count := $(shell wc -l $(missing-docs) | cut -d " " -f1))
 	@find . -empty -name $(missing-docs) | grep "^" &> /dev/null || ( \
-	  echo -e "\nMissing documetation!\nThe following" $(count) "files have incomplete documetation coverage:\n" && \
-	  cat $(missing-docs) && \
+          echo -e "\nMissing documetation!\nThe following $$(wc -l $(missing-docs) | cut -d ' ' -f1) files have incomplete documetation coverage:\n" && \
+	  cat $(missing-docs) && echo "" && \
 	  rm -f $(missing-docs) && \
 	  sleep 1 && \
 	  exit 1 \
@@ -218,6 +217,7 @@ cleanup-cabal-build-artifacts:
 	@echo -n " ☐  Cleaning extra Cabal build artifacts..."
 	@rm -f lower-bounds.project?*
 	@rm -f cabal.project?*
+	@rm -f cabal.project.local~?*                                                                                 
 	@echo -e "\r\033[K" $(CHECKMARK) " Cleaned Cabal extras"
 
 cleanup-HIE-files:
