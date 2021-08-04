@@ -1,18 +1,19 @@
 SHELL=/bin/bash
 CHECKMARK    := "\033[0;32m\xE2\x9C\x94\xE2\x83\x9E\033[0m"
+package-name     := memento-mori-mural
+cabal-depends    := $(package-name).cabal cabal.project
 
-package-name    := memento-mori-mural
-config-dir      := configs
 bin-dir          := ./bin
+cfg-dir          := ./configs
 hie-dir          := ./.hie
 
 formatter        := $(bin-dir)/stylish-haskell
-linter-flags     := --hint=$(config-dir)/.hlint.yaml
-lower-bound-file := $(config-dir)/lower-bounds.project
+linter-flags     := --hint=$(cfg-dir)/.hlint.yaml
+lower-bound-file := $(cfg-dir)/lower-bounds.project
 stan-exe         := $(bin-dir)/stan
-stan-flags       := --config-file=$(config-dir)/.stan.toml --hiedir=$(hie-dir)
+stan-flags       := --config-file=$(cfg-dir)/.stan.toml --hiedir=$(hie-dir)
 weeder-exe       := $(bin-dir)/weeder
-weeder-flags     := --config ./$(config-dir)/weeder.dhall --hie-directory $(hie-dir)
+weeder-flags     := --config ./$(cfg-dir)/weeder.dhall --hie-directory $(hie-dir)
 
 diff-log         := .diffs.log
 
@@ -53,25 +54,25 @@ cabal-total-targets = --enable-benchmarks --enable-tests
 # Actions to perform before building dependencies and project
 # Seperating the "pre-deploy" from "deploy" allows for CI caching the results
 # of the pre-deployment configuration.
-cabal-setup:
+cabal-setup: $(cabal-depends)
 	cabal update
 	cabal clean
 	cabal configure $(with-compiler-flags) $(cabal-haddock-flags) $(cabal-total-targets)
 	cabal freeze    $(with-compiler-flags) $(cabal-haddock-flags) $(cabal-total-targets)
 
 # Actions for building all binaries, benchmarks, and test-suites
-cabal-build:
+cabal-build: $(cabal-depends)
 	cabal build     $(with-compiler-flags) $(cabal-haddock-flags) $(cabal-total-targets) --only-dependencies
 	cabal build     $(with-compiler-flags) $(cabal-haddock-flags) $(cabal-total-targets)
 
 # Actions for building all binaries, benchmarks, and test-suites
-cabal-deploy: make-bin-dir cabal-build
+cabal-deploy: cabal-build make-bin-dir
 	cabal install   $(with-compiler-flags) $(cabal-haddock-flags) $(cabal-install-flags)
 
 cabal-clean: cleanup-cabal-default cleanup-cabal-build-artifacts cleanup-HIE-files
 
 # Builds with no extra generated features and no optimizations
-cabal-quick-prof: make-bin-dir $(package-name).cabal cabal.project
+cabal-quick-prof: $(cabal-depends) make-bin-dir
 	cabal build   $(cabal-fast-prof) $(cabal-total-targets) --only-dependencies
 	cabal build   $(cabal-fast-prof) $(cabal-total-targets)
 	cabal install $(cabal-fast-prof) $(cabal-install-flags)
@@ -116,27 +117,30 @@ hlint-check:
 
 format-code: install-stylish-haskell
 	@echo -n " ☐  Formatting code..."
-	@$(eval formatter-flags := -i)
-	@$(MAKE) --no-print-directory run-hlint in-place=true
+	@$(MAKE) --no-print-directory run-stylish-haskell in-place=true
 	@echo -e "\r\033[K" $(CHECKMARK) " Formatting code complete!"
 
 formatting-check: 
-	@echo "Checking code for required formatting"
-	@$(MAKE) --no-print-directory run-hlint
-	@find . -empty -name $(diff-log) | grep "^" &> /dev/null || ( \
-	  echo -e "Formatting required!\nFix by running the following:\n\n> make format-code\n" && \
-	  rm -f $(diff-log) && \
-	  sleep 1 && \
-	  exit 1 )
+	@echo -n "Checking code for required formatting"
+	@$(MAKE) --no-print-directory run-stylish-haskell
+	@if find . -empty -name $(diff-log) | grep "^" &> /dev/null; \
+	  then \
+	    echo -e "\r\033[KCode is properly formatted!"; \
+	  else \
+	    echo -e "\nFormatting required!\nFix by running the following:\n\n> make format-code\n" \
+	    rm -f $(diff-log) \
+	    sleep 1 \
+	    exit 1; \
+	fi
 
-run-hlint: install-stylish-haskell
+run-stylish-haskell: install-stylish-haskell
 ifdef in-place
 	@$(eval formatter-flags := -i)
 endif
 	@$(eval temp-file := styled.temp)
 	@rm -f $(diff-log)
 	@touch $(diff-log)
-	@echo $(code-files) | while read fname; do \
+	@echo $(code-files) | tr ' ' '\n' | while read fname; do \
 	  $(formatter) $(formatter-flags) "$$fname" > $(temp-file); \
 	  diff "$$fname" $(temp-file) >> $(diff-log) || true; \
 	done
@@ -155,7 +159,7 @@ static-analysis-check-setup: make-bin-dir
 	@echo "Downloading stan..."
 	cabal update
 	cabal install stan $(with-compiler-flags) $(cabal-install-flags)
-	$(bin-dir)/stan --version
+	$(stan-exe) --version
 	@$(MAKE) --no-print-directory hie-setup
 
 static-analysis-check-deploy: hie-deploy
@@ -169,11 +173,10 @@ static-analysis-check-deploy: hie-deploy
 	@rm -f $(stan-log)
 	@find . -empty -name $(observations) | grep "^" &> /dev/null || ( \
 	  echo -e "\nAnti-pattern observations found!\nCorrect the following $$(wc -l $(observations) | cut -d " " -f1) observations:\n" && \
-	  echo -n " ┏" && \
-	  printf '━%.0s' {1..52} && \
-	  echo "━" && \
-	  cat $(observations) && echo "" && \
+          echo -n " ┏" && printf '━%.0s' {1..52} && echo "━" && \
+	  cat $(observations) && \
 	  rm -f $(observations) && \
+	  echo -en " ┗" && printf '━%.0s' {1..52} && echo "━\n" && \
 	  sleep 1 && \
 	  exit 1 \
 	)

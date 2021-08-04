@@ -98,4 +98,6 @@ executable memento-mori-mural
       -Wunused-matches
       -Wwrong-do-bind
 
-
+  if impl(ghc <= 7.10)
+    ghc-options:
+      -fPIE
