@@ -16,5 +16,5 @@ life-expectancy    A positive number (default 75)
 
 [![momento-mori-mural example][asciinema-img]][asciinema-uri]
 
-[asciinema-img]: https://asciinema.org/a/rc1CpoMWftSoUHgIM1t6AyoYw.svg
-[asciinema-uri]: https://asciinema.org/a/rc1CpoMWftSoUHgIM1t6AyoYw
+[asciinema-img]: https://asciinema.org/a/e14YGlhu5nliBZ9DmksI8yhrT.svg
+[asciinema-uri]: https://asciinema.org/a/e14YGlhu5nliBZ9DmksI8yhrT
