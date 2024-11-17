@@ -15,6 +15,10 @@ import           System.Environment
 import           Text.Read                        (readMaybe)
 
 
+marginHorizontalWidth :: Int
+marginHorizontalWidth = 0
+
+
 data  YearAlive
     = LeapWeekYear
     | FullYear
@@ -37,10 +41,10 @@ main = do
 
 
 renderBenediction :: Show a => a -> String
-renderBenediction daysAlive = unlines
-    [ "    \ESC[1;37m .-. \ESC[39;49;0m  "
-    , "    \ESC[1;37m(0.0)\ESC[39;49;0m  " <> "Days survived: \ESC[3m" <> show daysAlive <> "\ESC[0m"
-    , "    \ESC[1;37m |m| \ESC[39;49;0m  " <> "\ESC[1mMemento Mori\ESC[0m"
+renderBenediction daysAlive = unlines $ fold . (marginLeft :) <$>
+    [ [ "  \ESC[1;37m .-. \ESC[39;49;0m  " ]
+    , [ "  \ESC[1;37m(0.0)\ESC[39;49;0m  ", "Days survived: \ESC[3m", show daysAlive, "\ESC[0m" ]
+    , [ "  \ESC[1;37m |m| \ESC[39;49;0m  ", "\ESC[1mMemento Mori\ESC[0m" ]
     ]
 
 
@@ -106,7 +110,7 @@ renderLifetimeMural birthDay lifeExpectancy today = unlines . fmap pad . lines $
   where
     daysAlive  = getDaysAlive  birthDay today
     weeksAlive = getWeeksAlive birthDay lifeExpectancy daysAlive
-    pad = ("  " <>)
+    pad = (marginLeft <>)
 
 
 body :: Day -> Word -> [YearAlive] -> String
@@ -198,3 +202,7 @@ getStartYear birthDay = startYear
   where
     birthYear  = getBirthYear birthDay
     startYear  = birthYear - (birthYear `mod` 5)
+
+
+marginLeft :: String
+marginLeft = replicate marginHorizontalWidth ' '

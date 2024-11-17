@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 CHECKMARK    := "\033[0;32m\xE2\x9C\x94\xE2\x83\x9E\033[0m"
 package-name     := memento-mori-mural
-cabal-depends    := $(package-name).cabal cabal.project
+cabal-depends    := $(package-name).cabal
 
 bin-dir          := ./bin
 cfg-dir          := ./configs
